@@ -1,4 +1,5 @@
 audio
+certs
 *.json
 *.lock
 .env

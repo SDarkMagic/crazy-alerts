@@ -1,0 +1,36 @@
+# Comments are provided throughout this file to help you get started.
+# If you need more help, visit the Docker compose reference guide at
+# https://docs.docker.com/compose/compose-file/
+
+# Here the instructions define your application as a service called "server".
+# This service is built from the Dockerfile in the current directory.
+# You can add other services your application may depend on here, such as a
+# database or a cache. For examples, see the Awesome Compose repository:
+# https://github.com/docker/awesome-compose
+services:
+  nginx:
+    restart: always
+    build:
+      dockerfile: Dockerfile
+      context: ./nginx
+    ports:
+      - 443:443
+    volumes:
+    - ./certs/:/etc/nginx/certs/
+
+  server:
+    container_name: crazy-alerts
+    build:
+      dockerfile: Dockerfile
+      context: .
+    env_file:
+      - .env
+    ports:
+      - 3000:3000
+    volumes:
+    - ./src:/app/src
+    - ./songs:/app/songs
+    - ./audio:/app/audio
+    depends_on:
+      - nginx
+    tty: true
