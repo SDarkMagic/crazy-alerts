@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Music</title>
+</head>
+<body>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+<script type="text/javascript" charset="utf-8">
+    var socket = io();
+    var audio = new Audio("/songs/tf-callback.mp3")
+    audio.loop = true
+    audio.playbackRate = 1.0
+    audio.play()
+
+    socket.on('connect', function() {
+    });
+
+    socket.on('increase-playback-rate', function(data) {
+        data = JSON.parse(data)
+        console.log(data)
+        audio.playbackRate += parseFloat(data.modifier)
+    })
+
+    socket.on('decrease-playback-rate', function(data) {
+        data = JSON.parse(data)
+        audio.playbackRate -= parseFloat(data.modifier)
+    })
+</script>
+</html>

@@ -26,14 +26,20 @@ def load_config(path):
         return json.loads(raw.read())
 
 class AudioPlayer():
-    def __init__(self, name, queue, pattern, cooldown=0, is_case_sensitive=False):
+    def __init__(self, name, queue, pattern, cooldown=0, is_case_sensitive=False, file_probabilities={}):
         self._name = name
         self.queue = queue
         self.pattern = pattern
         self.cooldown = cooldown
         self.is_case_sensitive = is_case_sensitive
+        self.probabilities = file_probabilities
         self.files = list((pathlib.Path(__file__).parent.parent / f'audio/{name}').rglob('*.wav'))
         self.last_call = time.time()
+
+        if len(self.probabilities) > 0:
+            total_weights = sum(self.probabilities.values())
+            self.probabilities['play_silence'] = float(1 - total_weights)
+
         return
 
     def play_audio(self, file=None):
@@ -44,8 +50,20 @@ class AudioPlayer():
                 print('Error, queue was empty. Terminating...')
                 return
 
-            self.send_data_to_socket(ws, random.choice(self.files), self._name)
+            file_to_play = file
+
+            if file_to_play == None:
+                if len(self.probabilities) > 0:
+                    file_to_play = pathlib.Path(f'{pathlib.Path(__file__).parent.parent}/audio/{self._name}/{random.choices(list(self.probabilities.keys()), weights=list(self.probabilities.values()))[0]}')
+                else:
+                    file_to_play = random.choice(self.files)
             self.last_call = time.time()
+
+            if file_to_play.name == 'play_silence':
+                self.queue.put(ws)
+                return
+
+            self.send_data_to_socket(ws, file_to_play, self._name)
             self.queue.put(ws) # Return the websocket to the queue after use so that other threads can use it
         return
 
@@ -89,12 +107,15 @@ class Bot(commands.Bot):
     def initialize_external_configs(self):
         alerts = self.config['alerts']
         players = []
+        probabilities = {}
         for alert in alerts['SimpleAudio']:
             if 'isCaseSensitive' in alert.keys():
                 caseSensitive = alert['isCaseSensitive']
             else:
                 caseSensitive = False
-            players.append(AudioPlayer(alert['name'], self.queue, alert['pattern'], alert['cooldown'], caseSensitive))
+            if 'probabilities' in alert.keys():
+                probabilities = alert['probabilities']
+            players.append(AudioPlayer(alert['name'], self.queue, alert['pattern'], alert['cooldown'], caseSensitive, probabilities))
         self.add_cog(HandlerCog(self, players))
 
     async def event_message(self, ctx):
